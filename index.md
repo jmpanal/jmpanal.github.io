@@ -1,3 +1,7 @@
+---
+title: Juan Manuel Panal
+---
+
 # Juan Manuel Panal
 
 **AI, Product, and Operations Leader**
