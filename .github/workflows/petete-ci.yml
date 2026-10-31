@@ -1,0 +1,25 @@
+name: Petete checks
+on:
+  push:
+    paths: ['projects/petete/**']
+  pull_request:
+    paths: ['projects/petete/**']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: projects/petete
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: projects/petete/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npx wrangler deploy --dry-run --config wrangler.local.jsonc
