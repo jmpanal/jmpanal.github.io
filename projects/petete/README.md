@@ -42,6 +42,9 @@ The full local app is served by Wrangler at its printed URL followed by `/petete
 
 ## Cloudflare deployment
 
+For deployment from your own browser using GitHub secrets, follow [this short guide](docs/deploy-from-your-browser.md). This route does not require a shared browser login, a local terminal, or committing a production database ID. The workflow provisions resources, initializes the first administrator and queues the historical import.
+
+
 See [deployment runbook](docs/deployment.md). The production configuration contains a clearly invalid local-only D1 ID until provisioning replaces it. `npm run deploy` refuses to deploy that ID.
 
 ```sh

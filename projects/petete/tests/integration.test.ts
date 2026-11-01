@@ -4,7 +4,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import worker from '../worker/index';
 import type { Database, Env, Statement } from '../worker/types';
 import { importDocuments, enqueueBackfill, scheduled, enrichPending, cleanupVectors } from '../worker/ingestion';
-import { DgtClient } from '../worker/dgt';
+import { DgtClient, parseDgtDocument } from '../worker/dgt';
 import { search, searchOptions } from '../worker/search';
 
 // Exercise the complete Worker routes with SQLite's real FTS5, triggers and SQL.
@@ -171,6 +171,20 @@ describe('Worker integration: ingestion, exact search and semantic mapping', () 
     expect(result.results[0].reference).toBe('V0001-26');
     expect(result.total_is_exact).toBe(false);
     expect(result.warning).toContain('no un recuento exhaustivo');
+  });
+
+  it('keeps cancelled-number source notices searchable without generating AI summaries or embeddings', async () => {
+    const {db,env}=setup();
+    const notice=parseDgtDocument(readFileSync(new URL('./fixtures/dgt-cancelled-number.html',import.meta.url),'utf8'),2);
+    await importDocuments(env,[notice]);
+    const stored=db.sqlite.prepare('SELECT * FROM rulings WHERE reference=?').get('V5505-26') as any;
+    expect(stored.summary_status).toBe('source_notice');expect(stored.embedding_status).toBe('not_applicable');
+    expect(stored.summary).toBe('V5505-26 Número de consulta anulado');
+    expect((db.sqlite.prepare('SELECT count(*) n FROM ruling_chunks').get() as any).n).toBe(0);
+    let calls=0;env.AI={async run(){calls++;throw new Error('A source cancellation notice must not invoke AI.');}};
+    await enrichPending(env,4);expect(calls).toBe(0);
+    const found=await search(db,env,searchOptions(new URL('https://test?q=V5505-26&mode=keyword')));
+    expect(found.results).toHaveLength(1);expect(found.results[0].summary_status).toBe('source_notice');
   });
 
   it('publishes source, tax and UTC date metadata with every chunk embedding', async () => {

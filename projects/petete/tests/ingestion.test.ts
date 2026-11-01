@@ -16,6 +16,14 @@ describe('DGT official source parser',()=>{
   expect(result.text.length).toBeGreaterThan(7000);expect(result.text).toContain('Contestación completa');expect(result.text).toContain('Lo que comunico a Vd.');
   expect(result.source_url).toBe('https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V2685-21');
  });
+ it('preserves an official cancelled-number notice without inventing a ruling answer',()=>{
+  const html=readFileSync(new URL('./fixtures/dgt-cancelled-number.html',import.meta.url),'utf8');
+  const notice=parseDgtDocument(html,2);
+  expect(notice.reference).toBe('V5505-26');expect(notice.date).toBe('2026-09-02');
+  expect(notice.title).toBe('Número de consulta anulado');expect(notice.text.length).toBeGreaterThan(40);
+  expect(notice.provenance).toMatchObject({documentKind:'cancellation_notice',fullRulingText:false,rulingAvailable:false,officialNotice:'V5505-26 Número de consulta anulado'});
+  expect(()=>parseDgtDocument(html.replace(' Número de consulta anulado',''),2)).toThrow(/missing reference, date or answer/);
+ });
  it('retains table/list text alongside answer paragraphs',()=>{
   const mixed=document.replace('Lo que comunico a Vd.','<table><tr><td>Tabla fiscal importante</td></tr></table><ul><li>Condición material</li></ul>Lo que comunico a Vd.');
   const result=parseDgtDocument(mixed,2);expect(result.text).toContain('Tabla fiscal importante');expect(result.text).toContain('Condición material');

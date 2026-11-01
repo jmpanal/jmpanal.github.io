@@ -44,15 +44,21 @@ export function parseSearchPage(html: string, tab: 1 | 2): DgtResultPage {
 }
 export function parseDgtDocument(html: string, tab: 1 | 2): DgtDocument {
  const { document } = parseHTML(html);
- const reference = field(document, 'NUM-CONSULTA');
+ const rawReference = field(document, 'NUM-CONSULTA');
+ const cancelledNumber = rawReference.match(/^((?:V)?\d{4,6}-\d{2}) Número de consulta anulado$/);
+ const reference = cancelledNumber ? cancelledNumber[1] : rawReference;
  const rawDate = field(document, 'FECHA-SALIDA');
  const match = rawDate.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
  const facts = field(document, 'DESCRIPCION-HECHOS');
  const question = field(document, 'CUESTION-PLANTEADA');
  const answer = field(document, 'CONTESTACION-COMPL');
- if (!/^(?:V)?\d{4,6}-\d{2}$/.test(reference) || !match || !answer) throw new Error('DGT document markup changed or incomplete: missing reference, date or answer.');
+ if (!/^(?:V)?\d{4,6}-\d{2}$/.test(reference) || !match || (!answer&&!cancelledNumber)) throw new Error('DGT document markup changed or incomplete: missing reference, date or answer.');
  const date = `${match[3]}-${match[2]}-${match[1]}`;
  if (new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) !== date) throw new Error('DGT invalid document date.');
+ if(cancelledNumber){
+  if(answer||facts||question)throw new Error('DGT cancellation notice contains unexpected substantive fields; manual review required.');
+  return {source:'dgt',reference,date,title:'Número de consulta anulado',text:`Número de consulta\n${rawReference}\n\nFecha salida\n${rawDate}`,source_url:`${DGT_ROOT}?num_consulta=${encodeURIComponent(reference)}`,tax:'Otros',binding:tab===2?1:0,provenance:{publisher:'Dirección General de Tributos',retrievedAt:new Date().toISOString(),endpoint:'consultas/do/document',documentKind:'cancellation_notice',officialNotice:rawReference,fullText:true,fullRulingText:false,rulingAvailable:false}};
+ }
  const organ = field(document, 'ORGANO');
  const legislation = field(document, 'NORMATIVA');
  const text = [['Órgano',organ],['Normativa',legislation],['Descripción de hechos',facts],['Cuestión planteada',question],['Contestación completa',answer]].filter(([,v]) => v).map(([k,v]) => `${k}\n${v}`).join('\n\n');

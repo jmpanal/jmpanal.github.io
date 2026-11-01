@@ -56,14 +56,20 @@ jobs:
       - name: Collect official DGT records and preserve checkpoints
         id: collect
         continue-on-error: true
-        run: >-
-          node --experimental-transform-types scripts/archive-collect.mjs
-          --dir "$ARCHIVE_DIRECTORY"
-          --bootstrap-seconds 180
-          --bootstrap-documents 60
-          --max-seconds 1800
-          --max-documents 2000
-          --interval-ms 1200
+        run: |
+          archive_seconds=1800
+          archive_documents=2000
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            archive_seconds=180
+            archive_documents=60
+          fi
+          node --experimental-transform-types scripts/archive-collect.mjs \
+            --dir "$ARCHIVE_DIRECTORY" \
+            --bootstrap-seconds 180 \
+            --bootstrap-documents 60 \
+            --max-seconds "$archive_seconds" \
+            --max-documents "$archive_documents" \
+            --interval-ms 1200
       - name: Verify and atomically publish source data
         if: ${{ always() && steps.restore.outcome == 'success' }}
         shell: bash

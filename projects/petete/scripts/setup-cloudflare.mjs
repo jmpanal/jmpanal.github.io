@@ -32,6 +32,7 @@ export function missingMetadataIndexes(indexes) {
  });
 }
 export async function setupCloudflare() {
+ if(process.env.CI&&(!process.env.CLOUDFLARE_API_TOKEN||!process.env.CLOUDFLARE_ACCOUNT_ID))throw new Error('CI deployment requires CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID. Configure the repository deployment secrets before running setup.');
  console.log('Checking Cloudflare account access. Existing jmpanal.com hosting will be preserved; only /petete is routed to this Worker.');
  const config=JSON.parse(await readFile(configPath,'utf8'));
  const databases=parseWranglerJson(run(['d1','list','--json'],true));
@@ -61,6 +62,6 @@ export async function setupCloudflare() {
  const secrets=parseWranglerJson(run(['secret','list','--format','json'],true));
  if(!Array.isArray(secrets))throw new Error('Unexpected Worker secret list.');
  if(!secrets.some(x=>x.name==='SESSION_PEPPER'))run(['secret','put','SESSION_PEPPER'],false,randomBytes(32).toString('hex')+'\n');
- console.log('Deployment finished. Run node scripts/create-admin.mjs to initialize the first administrator securely.');
+ console.log(process.env.CI?'Deployment finished. Continue with scripts/create-admin-ci.mjs to initialize account access and the DGT import queue.':'Deployment finished. Run node scripts/create-admin.mjs to initialize the first administrator securely.');
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url))await setupCloudflare();

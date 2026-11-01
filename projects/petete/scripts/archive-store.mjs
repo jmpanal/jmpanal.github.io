@@ -344,6 +344,7 @@ export class ArchiveStore {
             position,
             sha256: item.hash,
             date: item.document.date,
+            kind: item.document.provenance?.documentKind === 'cancellation_notice' ? 'cancellation_notice' : 'ruling',
           };
         });
       }
@@ -361,6 +362,7 @@ export class ArchiveStore {
         path,
         sha256: hash,
         records: Object.keys(index.records).length,
+        cancellationNotices: Object.values(index.records).filter(record => record.kind === 'cancellation_notice').length,
         month: index.month,
         tab: index.tab,
       };
@@ -369,7 +371,11 @@ export class ArchiveStore {
     const historical = this.manifest.windows.filter(
       (w) => w.campaign === "historical",
     );
+    const cancellationNotices = Object.values(this.manifest.indexes).reduce((n,index) => n + (index.cancellationNotices || 0),0);
+    const uniqueDocuments = Object.values(this.manifest.indexes).reduce((n,index) => n + index.records,0);
     this.manifest.statistics = {
+      cancellationNotices,
+      rulings: uniqueDocuments - cancellationNotices,
       uniqueDocuments: Object.values(this.manifest.indexes).reduce(
         (n, x) => n + x.records,
         0,
@@ -449,6 +455,7 @@ export async function verifyArchive(root, { deep = true } = {}) {
     throw new Error("Invalid archive manifest.");
   const indexes = [];
   let records = 0;
+  let cancellationNotices = 0;
   const references = new Set();
   for (const [key, pointer] of Object.entries(manifest.indexes)) {
     if (!HASH.test(pointer.sha256)) throw new Error("Invalid index checksum.");
@@ -469,6 +476,7 @@ export async function verifyArchive(root, { deep = true } = {}) {
           `Duplicate reference across monthly indexes: ${reference}`,
         );
       references.add(reference);
+      if(p.kind !== undefined && !['ruling','cancellation_notice'].includes(p.kind))throw new Error(`Invalid source record kind: ${reference}`);
       if (
         !manifest.shards[p.shard] ||
         !HASH.test(p.sha256) ||
@@ -479,6 +487,9 @@ export async function verifyArchive(root, { deep = true } = {}) {
       )
         throw new Error(`Invalid document pointer: ${reference}`);
     }
+    const noticeCount = Object.values(index.records).filter(record => record.kind === 'cancellation_notice').length;
+    if((pointer.cancellationNotices || 0) !== noticeCount)throw new Error('Cancellation-notice index count mismatch.');
+    cancellationNotices += noticeCount;
     records += pointer.records;
     indexes.push(index);
   }
@@ -519,7 +530,8 @@ export async function verifyArchive(root, { deep = true } = {}) {
           doc.date !== pointer.date ||
           documentHash(doc) !== pointer.sha256 ||
           doc.date.slice(0, 7) !== index.month ||
-          Boolean(doc.binding) !== (index.tab === 2)
+          Boolean(doc.binding) !== (index.tab === 2) ||
+          (pointer.kind || 'ruling') !== (doc.provenance?.documentKind === 'cancellation_notice' ? 'cancellation_notice' : 'ruling')
         )
           throw new Error(`Document integrity failure: ${reference}`);
       }
@@ -564,6 +576,7 @@ export async function verifyArchive(root, { deep = true } = {}) {
     throw new Error("Manifest stored-version count mismatch.");
   if (records !== manifest.statistics.uniqueDocuments)
     throw new Error("Manifest unique-document count mismatch.");
+  if(manifest.statistics.cancellationNotices !== undefined && (manifest.statistics.cancellationNotices !== cancellationNotices || manifest.statistics.rulings !== records-cancellationNotices))throw new Error('Cancellation-notice manifest count mismatch.');
   const completed = historical.filter((w) => w.status === "completed").length;
   if (
     manifest.statistics.historicalWindowsComplete !== completed ||

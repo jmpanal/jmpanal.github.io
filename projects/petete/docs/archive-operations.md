@@ -19,6 +19,8 @@ Read the Actions run summary and `petete-data/archive/manifest.json` for actual 
 - Historical month/database windows that have reconciled against official source counts.
 - Whether every historical window in the stated query range has completed.
 
+Official DGT results can include canceled consultation numbers. These notices are preserved with `documentKind: cancellation_notice` so result-count reconciliation remains exact. The manifest reports `rulings` and `cancellationNotices` separately; `uniqueDocuments` includes both. A cancellation notice has no substantive answer. Its application summary is the literal source notice with status `source_notice`, its embedding state is `not_applicable`, and it is excluded from AI summary generation and semantic embedding. Exact number lookup remains available.
+
 The historical query range is fixed when the first manifest is created. It starts on January 1, 1997 and ends on that run's date. A monthly campaign is created automatically when the collector first runs in a new UTC month. It refreshes the current month and two preceding months, ahead of the historical backfill. This overlap handles ordinary late publication within that interval. A correction published with an older ruling date requires an explicit additional historical refresh; the overlap is not a guarantee that all older revisions will be discovered.
 
 The official publication cutoff is separate from the calendar query range. `source.publicationCutoff` remains `null` unless independently verified for the snapshot. A query ending today does not establish that DGT has published today's documents.

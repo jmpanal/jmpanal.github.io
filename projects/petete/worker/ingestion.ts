@@ -63,8 +63,10 @@ export async function importDocuments(env: Env, documents: ImportDocument[], per
   const existing=await db.prepare('SELECT id,content_hash FROM rulings WHERE source=? AND reference=?').bind(doc.source,doc.reference).first<{id:string;content_hash:string}>();
   if(existing?.content_hash===hash){unchanged++;continue;}
   const targetId=existing?.id||id;
-  const chunks=chunkText(doc.text);const stamp=now();
+  const sourceNotice=doc.source==='dgt'&&doc.provenance?.documentKind==='cancellation_notice';
+  const chunks=sourceNotice?[]:chunkText(doc.text);const stamp=now();
   const statements=[db.prepare(`INSERT INTO rulings(id,source,reference,date,title,text,summary,summary_status,source_url,tax,topics,binding,content_hash,indexed_at,embedding_status,provenance) VALUES(?,?,?,?,?,?,NULL,'pending',?,?,'[]',?,?,?,'pending',?) ON CONFLICT(source,reference) DO UPDATE SET date=excluded.date,title=excluded.title,text=excluded.text,summary=NULL,summary_status='pending',source_url=excluded.source_url,tax=excluded.tax,binding=excluded.binding,content_hash=excluded.content_hash,indexed_at=excluded.indexed_at,embedding_status='pending',summary_model=NULL,summary_at=NULL,summary_content_hash=NULL,summary_attempts=0,summary_retry_at=NULL,summary_error=NULL,provenance=excluded.provenance`).bind(targetId,doc.source,doc.reference,doc.date,doc.title,doc.text,doc.source_url,doc.tax||'Otros',doc.binding?1:0,hash,stamp,JSON.stringify({...doc.provenance,...permission})),db.prepare('INSERT OR IGNORE INTO vector_cleanup(id,created_at) SELECT id,? FROM ruling_chunks WHERE ruling_id=?').bind(stamp,targetId),db.prepare('DELETE FROM ruling_chunks WHERE ruling_id=?').bind(targetId),db.prepare(`INSERT INTO ruling_chunks(id,ruling_id,ordinal,text) SELECT ?||'-c'||key||'-'||?, ?,CAST(key AS INTEGER),value FROM json_each(?)`).bind(targetId,hash.slice(0,8),targetId,JSON.stringify(chunks))];
+  if(sourceNotice)statements.push(db.prepare(`UPDATE rulings SET summary=?,summary_status='source_notice',embedding_status='not_applicable',summary_model=NULL,summary_at=NULL,summary_content_hash=content_hash WHERE id=?`).bind(typeof doc.provenance?.officialNotice==='string'?doc.provenance.officialNotice:'Número de consulta anulado',targetId));
   await db.batch(statements);inserted++;
  }
  return {inserted,unchanged};

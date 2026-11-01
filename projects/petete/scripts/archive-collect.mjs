@@ -76,7 +76,7 @@ if (process.env.GITHUB_STEP_SUMMARY) {
   const s = store.manifest.statistics;
   await appendFile(
     process.env.GITHUB_STEP_SUMMARY,
-    `## DGT archive collection\n\nRun: ${result.status}. Stored unique rulings: ${s.uniqueDocuments}. Historical windows reconciled: ${s.historicalWindowsComplete}/${s.historicalWindowsTotal}.\n\nHistorical query range: ${store.manifest.historical.from} through ${store.manifest.historical.to}. Complete: ${s.historicalComplete ? "yes" : "no"}. Official publication cutoff: unverified for this snapshot.\n\nThe archive branch contains public DGT source documents. These counts do not establish Cloudflare import, AI summary, or semantic-index completion.\n${result.error ? "\nA source or integrity failure was recorded in archive/manifest.json. The cursor was preserved for investigation and retry.\n" : ""}`,
+    `## DGT archive collection\n\nRun: ${result.status}. Stored source records: ${s.uniqueDocuments} (${s.rulings ?? s.uniqueDocuments} rulings, ${s.cancellationNotices || 0} official canceled-number notices). Historical windows reconciled: ${s.historicalWindowsComplete}/${s.historicalWindowsTotal}.\n\nHistorical query range: ${store.manifest.historical.from} through ${store.manifest.historical.to}. Complete: ${s.historicalComplete ? "yes" : "no"}. Official publication cutoff: unverified for this snapshot.\n\nThe archive branch contains public DGT source documents. These counts do not establish Cloudflare import, AI summary, or semantic-index completion.\n${result.error ? "\nA source or integrity failure was recorded in archive/manifest.json. The cursor was preserved for investigation and retry.\n" : ""}`,
   );
 }
 if (["failed", "blocked"].includes(result.status)) process.exitCode = 1;

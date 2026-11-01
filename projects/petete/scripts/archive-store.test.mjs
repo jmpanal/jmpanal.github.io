@@ -325,3 +325,16 @@ test("an official date correction moves the latest ruling between monthly indexe
   assert.equal(exported[0].date, "1997-02-03");
   assert.equal(exported[0].text, corrected.text);
 });
+
+test('official canceled-number notices reconcile as source records while remaining distinct from rulings', async (t) => {
+  const {root,store}=await setup(t);
+  const window=store.nextWindow();
+  const notice=record('0002-97',{title:'Número de consulta anulado',text:'Número de consulta\n0002-97 Número de consulta anulado\n\nFecha salida\n03/01/1997',provenance:{documentKind:'cancellation_notice',officialNotice:'0002-97 Número de consulta anulado',fullRulingText:false,rulingAvailable:false}});
+  await store.record(window,record());await store.record(window,notice);window.cursor.nextDocument=2;
+  assert.equal(store.reconcile(window,2),true);await store.persist();
+  const verified=await verifyArchive(root);
+  assert.equal(verified.manifest.statistics.uniqueDocuments,2);
+  assert.equal(verified.manifest.statistics.rulings,1);
+  assert.equal(verified.manifest.statistics.cancellationNotices,1);
+  assert.equal((await documents(root)).find(doc=>doc.reference==='0002-97').provenance.documentKind,'cancellation_notice');
+});
