@@ -173,6 +173,17 @@ describe('Worker integration: ingestion, exact search and semantic mapping', () 
     expect(result.warning).toContain('no un recuento exhaustivo');
   });
 
+  it('publishes source, tax and UTC date metadata with every chunk embedding', async () => {
+    const { db, env } = setup();
+    await importDocuments(env, [document()]);
+    const published: any[] = [];
+    env.AI = { async run(model: string) { return model.includes('bge-m3') ? {data:[Array(1024).fill(0.1)]} : {response:'La consulta examina el IVA del arrendamiento.'}; } };
+    env.VECTORIZE = { async query() { return {matches:[]}; }, async upsert(vectors: any[]) { published.push(...vectors); } };
+    await enrichPending(env, 2);
+    expect(published).toHaveLength(1);
+    expect(published[0].metadata).toMatchObject({source:'dgt',tax:document().tax,date_epoch:Date.parse(document().date+'T00:00:00Z')/1000});
+  });
+
   it('backs off failed AI calls so a bad chunk cannot starve other documents', async () => {
     const { db, env } = setup();
     await importDocuments(env, [document('V0001-26'), document('V0002-26')]);

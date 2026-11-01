@@ -25,7 +25,12 @@ export function parseSearchPage(html: string, tab: 1 | 2): DgtResultPage {
  const totalMatch = html.match(/updateNumResults\(\s*["']([12])["']\s*,\s*["']([\d.,]+)["']\s*\)/);
  const query = document.querySelector('input#query')?.getAttribute('value') ?? '';
  const ids = Array.from(document.querySelectorAll('td[id^="doc_"]')).map(x => x.id.replace('doc_', '')).filter(x => /^\d+$/.test(x));
- if (!totalMatch || Number(totalMatch[1]) !== tab) throw new Error('DGT search markup changed or incomplete: missing result count.');
+ if(!totalMatch){
+  const emptyMessage=clean(document.querySelector('div.extra_padding > div.message')?.textContent);
+  if(emptyMessage==='La consulta realizada no devuelve resultados.'&&!ids.length&&!document.querySelector('table.results'))return {query:'',order:'FECHA-SALIDA|0',page:1,totalPages:0,total:0,documentIds:[]};
+  throw new Error('DGT search markup changed or incomplete: missing result count.');
+ }
+ if(Number(totalMatch[1])!==tab)throw new Error('DGT search markup changed or incomplete: missing result count.');
  const total = Number(totalMatch[2].replace(/[.,]/g, ''));
  if (!Number.isSafeInteger(total) || total < 0) throw new Error('DGT invalid result count.');
  if (total === 0 && ids.length) throw new Error('DGT inconsistent empty response.');

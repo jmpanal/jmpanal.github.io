@@ -1,11 +1,17 @@
 export interface D1Result<T = Record<string, unknown>> { results: T[]; success?: boolean; meta?: { changes?: number; last_row_id?: number }; }
 export interface Statement { bind(...values: unknown[]): Statement; first<T = Record<string, unknown>>(column?: string): Promise<T | null>; all<T = Record<string, unknown>>(): Promise<D1Result<T>>; run(): Promise<D1Result>; }
 export interface Database { prepare(query: string): Statement; batch(statements: Statement[]): Promise<D1Result[]>; exec(query: string): Promise<unknown>; }
+export interface VectorizeMetadataFilter {
+  source?: { $eq: 'dgt' | 'cendoj' };
+  tax?: { $eq: string };
+  date_epoch?: { $gte?: number; $lte?: number };
+}
+export interface VectorizeQueryOptions { topK: number; returnMetadata?: 'none' | 'indexed' | 'all'; filter?: VectorizeMetadataFilter; }
 export interface Env {
   DB?: Database;
   ASSETS?: { fetch(request: Request): Promise<Response> };
   AI?: { run(model: string, input: Record<string, unknown>): Promise<any> };
-  VECTORIZE?: { query(vector: number[], options: Record<string, unknown>): Promise<{ matches: { id: string; score: number }[] }>; upsert(vectors: any[]): Promise<unknown> };
+  VECTORIZE?: { query(vector: number[], options: VectorizeQueryOptions): Promise<{ matches: { id: string; score: number }[] }>; upsert(vectors: any[]): Promise<unknown> };
   ADMIN_BOOTSTRAP_TOKEN?: string;
   SESSION_PEPPER?: string;
   APP_ORIGIN?: string;

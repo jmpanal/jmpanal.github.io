@@ -7,7 +7,7 @@ const now = () => new Date().toISOString();
 export interface ImportDocument { source: 'dgt' | 'cendoj'; reference: string; date: string; title: string; text: string; source_url: string; tax?: string; binding?: number; provenance?: Record<string, unknown>; }
 interface Job { id: string; type: string; from_date: string; to_date: string; cursor: string; processed: number; attempts: number; }
 interface Cursor { tab: 1 | 2; page: number; nextDocument: number; query?: string; order?: string; rounds?: number; }
-interface Chunk { id: string; ruling_id: string; ordinal: number; text: string; summary: string | null; embedding_status: string; attempts:number; }
+interface Chunk { id: string; ruling_id: string; ordinal: number; text: string; summary: string | null; embedding_status: string; attempts:number; source:'dgt'|'cendoj';tax:string;date:string; }
 export async function contentHash(text: string) { return [...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)))].map(v => v.toString(16).padStart(2,'0')).join(''); }
 export function chunkText(text: string, size=5000, overlap=350): string[] {
  if (size < 100 || overlap < 0 || overlap >= size) throw new Error('Invalid chunk settings.');
@@ -129,14 +129,14 @@ async function summarize(env:Env,text:string,aggregate=false):Promise<string>{
 export async function enrichPending(env:Env,maxCalls=4){
  if(!env.AI)return {state:'awaiting_ai_binding',calls:0};
  const db=requireDb(env);let calls=0;
- const chunks=(await db.prepare(`SELECT * FROM ruling_chunks WHERE attempts<6 AND (retry_at IS NULL OR retry_at<=?) AND (summary IS NULL OR (embedding_status='pending' AND ?=1)) ORDER BY ruling_id,ordinal LIMIT ?`).bind(now(),env.VECTORIZE?1:0,maxCalls).all<Chunk>()).results;
+ const chunks=(await db.prepare(`SELECT c.*,r.source,r.tax,r.date FROM ruling_chunks c JOIN rulings r ON r.id=c.ruling_id WHERE c.attempts<6 AND (c.retry_at IS NULL OR c.retry_at<=?) AND (c.summary IS NULL OR (c.embedding_status='pending' AND ?=1)) ORDER BY c.ruling_id,c.ordinal LIMIT ?`).bind(now(),env.VECTORIZE?1:0,maxCalls).all<Chunk>()).results;
  for(const chunk of chunks){
   try{
    if(!chunk.summary&&calls<maxCalls){calls++;const summary=await summarize(env,chunk.text);await db.prepare('UPDATE ruling_chunks SET summary=?,summary_model=?,summary_at=?,error=NULL,attempts=0,retry_at=NULL WHERE id=?').bind(summary,SUMMARY_MODEL,now(),chunk.id).run();}
    if(env.VECTORIZE&&chunk.embedding_status==='pending'&&calls<maxCalls){
     calls++;const output=await env.AI.run(EMBEDDING_MODEL,{text:[chunk.text]});
     const vector=output?.data?.[0];if(!Array.isArray(vector)||vector.length!==1024||vector.some((v:any)=>typeof v!=='number'||!Number.isFinite(v)))throw new Error('Invalid embedding vector; expected 1024 finite dimensions.');
-    await env.VECTORIZE.upsert([{id:chunk.id,values:vector,metadata:{ruling_id:chunk.ruling_id,chunk:chunk.ordinal}}]);
+    await env.VECTORIZE.upsert([{id:chunk.id,values:vector,metadata:{ruling_id:chunk.ruling_id,chunk:chunk.ordinal,source:chunk.source,tax:chunk.tax,date_epoch:Date.parse(chunk.date+'T00:00:00Z')/1000}}]);
     await db.prepare(`UPDATE ruling_chunks SET embedding_status='indexed',error=NULL,attempts=0,retry_at=NULL WHERE id=?`).bind(chunk.id).run();
    }
   }catch(error){const attempts=(chunk.attempts||0)+1;await db.prepare('UPDATE ruling_chunks SET error=?,attempts=?,retry_at=? WHERE id=?').bind(String(error).slice(0,1500),attempts,new Date(Date.now()+Math.min(86400000,15*60000*2**(attempts-1))).toISOString(),chunk.id).run();}

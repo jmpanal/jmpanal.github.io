@@ -43,3 +43,9 @@ D1 recovery/backup options depend on the account plan. Verify available Time Tra
 Block/cancel revokes active sessions. Multiple network aliases or user agents are review signals, not proof of sharing. The application uses hashed network identifiers and does not store the raw IP. Restrict administrative access and define a retention policy appropriate for your deployment.
 
 To remove Petete routing, remove only its two Worker routes. The current root website stays hosted by its existing service. Use Cloudflare's previous Worker version for code rollback; database migrations are forward-only and require a separate recovery plan if incompatible.
+
+## Initial data and filtered retrieval
+
+Deployment now inserts nine verified source documents without replacing existing records. Production summaries start pending and full-text chunks are created, so AI enrichment can run. Local development keeps editorial summaries. Setup checks1024-dimensional cosine vectors and creates source, tax and date_epoch filtering indexes. Migration0004 requeues old embeddings so all chunks acquire this metadata.
+
+The source archive can also run independently through the GitHub workflow and petete-data branch. Consult docs/archive-operations.md before importing that archive into D1. Collection does not establish AI completion. CENDOJ integrated search remains subject to the authorization described in docs/cendoj-search-assessment.md.

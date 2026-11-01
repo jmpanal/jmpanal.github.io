@@ -37,3 +37,7 @@ Above-the-fold copy retains the primary heading, subtitle, navigation and search
 ## Still requiring production verification
 
 Cloudflare bindings, route ownership, live AI model output quality in Spanish tax text, Vectorize indexing, scheduled runtime, full historical reconciliation, complete CENDOJ authorization/data acquisition, operational backups and retention policy. These are visible activation dependencies, not represented as completed work.
+
+## Finalization pass,2026-11-01
+
+46 application and integration tests and26 archive fault/retry tests passed. The new checks cover production chunks/seeding, insert-only preservation, filtered vector retrieval, real empty DGT search pages and atomic archive publication. Production build and Worker compilation passed. The resumable GitHub collector uses only its repository token and persists data independently of Cloudflare. Its first live source probe stored5003-26 and resumed at5004-26, with two unique records and no claim of completed historical windows. Cloudflare authentication and CENDOJ authorization remain external dependencies.

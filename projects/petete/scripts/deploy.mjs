@@ -10,4 +10,6 @@ run(['scripts/build-demo.mjs']);
 run(['node_modules/typescript/bin/tsc','--noEmit']);
 run(['node_modules/vite/bin/vite.js','build']);
 run(['node_modules/wrangler/bin/wrangler.js','d1','migrations','apply','petete','--remote']);
+run(['scripts/seed-demo.mjs','--production']);
+run(['node_modules/wrangler/bin/wrangler.js','d1','execute','petete','--remote','--file','.tmp/demo-seed.sql','--yes']);
 run(['node_modules/wrangler/bin/wrangler.js','deploy','--keep-vars']);

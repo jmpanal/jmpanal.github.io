@@ -50,9 +50,13 @@ npm run setup:cloudflare
 node scripts/create-admin.mjs
 ```
 
-The setup command creates or reuses the `petete` D1 database and `petete-bge-m3` Vectorize index, applies migrations and deploys the application. D1 creation requests EU jurisdiction. It uses your existing Cloudflare account and does not change the domain's nameservers or replace root-page content. Cloudflare usage charges depend on your plan, corpus size and AI workload. No paid plan is purchased by this code.
+The setup command creates or reuses the `petete` D1 database and `petete-bge-m3` Vectorize index, verifies its dimensions and filtering metadata, applies migrations, seeds nine real production documents with pending AI work, and deploys the application. D1 creation requests EU jurisdiction. It uses your existing Cloudflare account and does not change the domain's nameservers or replace root-page content. Cloudflare usage charges depend on your plan, corpus size and AI workload. No paid plan is purchased by this code.
 
 After signing in as administrator, import the desired dates from **Administración**, inspect job failures and indexing state, and reconcile each source window before relying on coverage. Do not mark the database complete based only on row counts.
+
+## Durable historical collection
+
+The `Petete DGT source archive` GitHub workflow starts on project changes, then resumes hourly. It publishes compressed official-source documents and their verified checkpoints atomically to the separate `petete-data` branch. Monthly refresh windows have priority over historical work. No Cloudflare secret is required for this collection. See [archive operations](docs/archive-operations.md). Archived, imported, AI summarized and semantically indexed are distinct states. A running workflow does not mean the historical archive is complete.
 
 ## Repository layout
 

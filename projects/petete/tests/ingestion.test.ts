@@ -28,6 +28,11 @@ describe('DGT official source parser',()=>{
   expect(()=>parseSearchPage(search.replace('value=" .EN NUM-CONSULTA (V2685-21)"','value=""'),2)).toThrow(/missing query/);
   expect(()=>parseDgtDocument('<table><tr class="NUM-CONSULTA"><td class="value">V2685-21</td></tr></table>',2)).toThrow(/incomplete/);
  });
+ it('accepts the observed official no-results template, while rejecting a generic page containing those words',()=>{
+  const empty=readFileSync(new URL('./fixtures/dgt-empty.html',import.meta.url),'utf8');
+  expect(parseSearchPage(empty,1)).toMatchObject({total:0,totalPages:0,documentIds:[]});
+  expect(()=>parseSearchPage('<html>La consulta realizada no devuelve resultados.</html>',1)).toThrow();
+ });
  it('only accepts a structurally verified zero count as an empty result',()=>{
   expect(parseSearchPage('<script>updateNumResults("1","0");</script>',1).total).toBe(0);
   expect(()=>parseSearchPage('<script>updateNumResults("1","0");</script>',2)).toThrow();
