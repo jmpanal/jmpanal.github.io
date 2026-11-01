@@ -20,9 +20,6 @@ jobs:
     defaults:
       run:
         working-directory: projects/petete
-    env:
-      ARCHIVE_WORKTREE: ${{ runner.temp }}/petete-data
-      ARCHIVE_DIRECTORY: ${{ runner.temp }}/petete-data/archive
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,6 +33,11 @@ jobs:
       - run: npm ci
       - name: Verify checkpoint and collector behavior
         run: node --test scripts/archive-store.test.mjs scripts/archive-runner.test.mjs
+      - name: Set archive paths on the runner
+        shell: bash
+        run: |
+          echo "ARCHIVE_WORKTREE=$RUNNER_TEMP/petete-data" >> "$GITHUB_ENV"
+          echo "ARCHIVE_DIRECTORY=$RUNNER_TEMP/petete-data/archive" >> "$GITHUB_ENV"
       - name: Restore durable data branch
         id: restore
         shell: bash
